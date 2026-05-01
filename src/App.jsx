@@ -222,10 +222,10 @@ function WaitlistDrawer({ open, onClose }) {
 function BentoCard({ children, className = "", delay = 0 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-10%" }}
-      transition={{ duration: 1, delay, ease: [0.22, 1, 0.36, 1] }}
+      viewport={{ once: true, margin: "0px 0px -10% 0px", amount: 0.15 }}
+      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
       className={"relative rounded-3xl p-7 md:p-8 flex flex-col justify-between min-h-[300px] overflow-hidden " + className}
       style={{
         background: "rgba(14, 14, 16, 0.55)",
@@ -569,10 +569,10 @@ function SessionHUD() {
 function BentoFeatureCard({ delay = 0 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24, scale: 0.98 }}
+      initial={{ opacity: 0, y: 16, scale: 0.98 }}
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, margin: "-10%" }}
-      transition={{ duration: 1.2, delay, ease: [0.22, 1, 0.36, 1] }}
+      viewport={{ once: true, margin: "0px 0px -10% 0px", amount: 0.15 }}
+      transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
       className="relative rounded-3xl overflow-hidden md:row-span-2 min-h-[440px] md:min-h-[540px] flex flex-col"
       style={{
         background: "linear-gradient(180deg, #0c0c0f 0%, #050507 100%)",
@@ -608,25 +608,30 @@ function BentoFeatureCard({ delay = 0 }) {
 
 function HeroBackground() {
   const { scrollY } = useScroll();
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-  const scale  = useTransform(scrollY, [0, vh * 2], [1, 1.25]);
-  const blur   = useTransform(scrollY, [0, vh * 0.3, vh * 1.6], [0, 0, 36]);
+  const scale  = useTransform(scrollY, [0, vh * 2], [1, isMobile ? 1.15 : 1.25]);
+  const blur   = useTransform(scrollY, [0, vh * 0.3, vh * 1.6], [0, 0, isMobile ? 0 : 36]);
   const filter = useTransform(blur, (b) => `blur(${b}px) saturate(1.12)`);
-  const y      = useTransform(scrollY, [0, vh * 2], [0, -140]);
+  const y      = useTransform(scrollY, [0, vh * 2], [0, isMobile ? -80 : -140]);
+
+  const bgUrl = isMobile
+    ? "https://promethee-landing.vercel.app/assets/landing_background_sm.jpg"
+    : "https://promethee-landing.vercel.app/assets/landing_background_lg.jpg";
 
   return (
     <div className="fixed inset-0 z-[0] overflow-hidden">
       <motion.div
         className="absolute -inset-20"
         style={{
-          backgroundImage: "url('https://promethee-landing.vercel.app/assets/landing_background.png')",
+          backgroundImage: `url('${bgUrl}')`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           scale,
-          filter,
+          filter: isMobile ? undefined : filter,
           y,
           transform: "translateZ(0)",
-          willChange: "transform, filter",
+          willChange: "transform",
           backfaceVisibility: "hidden",
         }}
       />
@@ -656,13 +661,13 @@ export default function App() {
           </header>
 
           <section className="flex-1 relative">
-            <div className="absolute left-0 right-0 bottom-[25%] flex items-end justify-between gap-6">
+            <div className="absolute left-0 right-0 bottom-[25%] flex flex-col items-center text-center gap-8 md:flex-row md:items-end md:justify-between md:text-left md:gap-6">
               <motion.h1
                 key="headline"
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-                className="text-white text-5xl sm:text-6xl md:text-7xl font-medium leading-[1.02] tracking-tight max-w-4xl"
+                className="text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-medium leading-[1.02] tracking-tight max-w-4xl"
               >
                 The new era begins.
               </motion.h1>
@@ -700,7 +705,7 @@ export default function App() {
         </div>
 
         <div
-          className="relative w-full h-72 -mt-10 pointer-events-none"
+          className="relative w-full h-32 md:h-48 -mt-10 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.55) 100%)" }}
         />
 
@@ -708,13 +713,13 @@ export default function App() {
           className="snap-section relative w-full px-6 md:px-10 pb-32"
           style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.7) 30%, rgba(0,0,0,0.78) 100%)" }}
         >
-          <div className="max-w-6xl mx-auto pt-40 md:pt-56">
+          <div className="max-w-6xl mx-auto pt-16 md:pt-24">
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-15%" }}
-              transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-              className="text-center mb-16 md:mb-20"
+              viewport={{ once: true, margin: "0px 0px -10% 0px" }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              className="text-center mb-12 md:mb-16"
             >
               <h2 className="text-white text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.05]">
                 Work is invisible.
@@ -725,7 +730,7 @@ export default function App() {
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 auto-rows-[minmax(220px,auto)]">
-              <BentoCard delay={0.05}>
+              <BentoCard delay={0}>
                 <div className="flex flex-col h-full">
                   <div className="flex-1 flex items-center justify-center pb-4">
                     <AmbientPill />
@@ -740,9 +745,9 @@ export default function App() {
                 </div>
               </BentoCard>
 
-              <BentoFeatureCard delay={0.15} />
+              <BentoFeatureCard delay={0.05} />
 
-              <BentoCard delay={0.25}>
+              <BentoCard delay={0.1}>
                 <div className="flex flex-col h-full">
                   <div className="flex-1 flex items-center justify-center pb-4">
                     <ProgressionWidget />
@@ -757,7 +762,7 @@ export default function App() {
                 </div>
               </BentoCard>
 
-              <BentoCard delay={0.35}>
+              <BentoCard delay={0.15}>
                 <div className="flex flex-col h-full">
                   <div className="flex-1 flex items-center justify-center pb-4">
                     <CoPresenceWidget />
@@ -772,7 +777,7 @@ export default function App() {
                 </div>
               </BentoCard>
 
-              <BentoCard delay={0.55}>
+              <BentoCard delay={0.2}>
                 <div className="flex flex-col h-full">
                   <div className="flex-1 flex items-center justify-center pb-4">
                     <HeatmapWidget />
@@ -791,7 +796,7 @@ export default function App() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-10%" }}
+              viewport={{ once: true, margin: "0px 0px -10% 0px", amount: 0.15 }}
               transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col items-center mt-20 md:mt-28 text-center"
             >
@@ -800,10 +805,10 @@ export default function App() {
               </p>
               <button
                 onClick={handleWaitlistClick}
-                className="liquid-glass rounded-full pl-7 pr-2 py-2 inline-flex items-center gap-4 text-white text-sm group hover:scale-[1.02] transition-transform duration-300"
+                className="liquid-glass rounded-2xl pl-7 pr-2 py-2 inline-flex items-center gap-4 text-white text-sm group hover:scale-[1.02] transition-transform duration-300"
               >
                 <span className="uppercase tracking-[0.22em] text-xs">Request access</span>
-                <span className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center transition-transform duration-300 group-hover:rotate-45">
+                <span className="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center transition-transform duration-300 group-hover:rotate-45">
                   <ArrowUpRight size={15} />
                 </span>
               </button>
