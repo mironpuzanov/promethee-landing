@@ -655,64 +655,42 @@ export default function App() {
             <span className="text-[10px] uppercase tracking-[0.3em] text-white/50">Spring 2026</span>
           </header>
 
-          <section className="flex-1 flex flex-col items-center justify-center text-center relative">
-            <motion.span
-              key="eyebrow"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-              className="text-[10px] uppercase tracking-[0.4em] text-white/45 mb-8 inline-flex items-center gap-2"
-            >
-              <span className="inline-flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-white/60" />
-                <span>Coming soon</span>
-                <span className="w-1 h-1 rounded-full bg-white/60" />
-              </span>
-            </motion.span>
-
-            <motion.h1
-              key="headline"
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.4, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-              className="text-white text-5xl sm:text-6xl md:text-7xl font-medium leading-[1.02] tracking-tight max-w-4xl"
-            >
-              The new era begins.
-            </motion.h1>
-
-            <motion.p
-              key="lede"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.2, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="text-white/55 text-base md:text-lg mt-6 max-w-md leading-relaxed"
-            >
-              Promethee is almost here.
-            </motion.p>
-
-            <motion.div
-              key="cta"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.2, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-9"
-            >
-              <button
-                onClick={handleWaitlistClick}
-                className="liquid-glass rounded-full pl-7 pr-2 py-2 inline-flex items-center gap-4 text-white text-sm group hover:scale-[1.02] transition-transform duration-300"
+          <section className="flex-1 relative">
+            <div className="absolute left-0 right-0 bottom-[25%] flex items-end justify-between gap-6">
+              <motion.h1
+                key="headline"
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                className="text-white text-5xl sm:text-6xl md:text-7xl font-medium leading-[1.02] tracking-tight max-w-4xl"
               >
-                <span className="uppercase tracking-[0.22em] text-xs">Join waitlist</span>
-                <span className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center transition-transform duration-300 group-hover:rotate-45">
-                  <ArrowUpRight size={15} />
-                </span>
-              </button>
-            </motion.div>
+                The new era begins.
+              </motion.h1>
+
+              <motion.div
+                key="cta"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.0, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                className="shrink-0"
+              >
+                <button
+                  onClick={handleWaitlistClick}
+                  className="liquid-glass rounded-2xl pl-7 pr-2 py-2 inline-flex items-center gap-4 text-white text-sm group hover:scale-[1.02] transition-transform duration-300"
+                >
+                  <span className="uppercase tracking-[0.22em] text-xs">Join waitlist</span>
+                  <span className="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center transition-transform duration-300 group-hover:rotate-45">
+                    <ArrowUpRight size={15} />
+                  </span>
+                </button>
+              </motion.div>
+            </div>
 
             <motion.div
               key="scroll-hint"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 1.2, delay: 1.2 }}
+              transition={{ duration: 1.2, delay: 0.8 }}
               className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/35"
             >
               <span className="text-[9px] uppercase tracking-[0.4em]">Scroll</span>
