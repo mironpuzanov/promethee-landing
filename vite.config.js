@@ -1,16 +1,20 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { viteSingleFile } from "vite-plugin-singlefile";
 
 export default defineConfig({
-  plugins: [react(), viteSingleFile()],
+  plugins: [react()],
   build: {
     target: "es2018",
     cssCodeSplit: false,
-    assetsInlineLimit: 100000000,
-    chunkSizeWarningLimit: 100000000,
     rollupOptions: {
-      output: { inlineDynamicImports: true },
+      output: {
+        entryFileNames: "assets/promethee.js",
+        chunkFileNames: "assets/promethee-[name].js",
+        assetFileNames: (info) => {
+          if (info.name && info.name.endsWith(".css")) return "assets/promethee.css";
+          return "assets/[name][extname]";
+        },
+      },
     },
   },
 });

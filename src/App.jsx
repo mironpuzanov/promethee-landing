@@ -572,7 +572,7 @@ function HeroBackground() {
       <motion.div
         className="absolute -inset-20"
         style={{
-          backgroundImage: "url('assets/landing_background.png')",
+          backgroundImage: "url('https://promethee-landing.vercel.app/assets/landing_background.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           scale,
