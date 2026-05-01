@@ -587,8 +587,31 @@ function HeroBackground() {
   );
 }
 
+function openWebflowWaitlist() {
+  if (typeof window === "undefined") return;
+  const selectors = [
+    ".hero__btn",
+    ".hero__btn .btn_wrap",
+    "[data-modal-open]",
+    ".sticky_btn",
+    ".sticky_btn .btn_wrap",
+  ];
+  for (const sel of selectors) {
+    const el = window.parent?.document?.querySelector?.(sel) || document.querySelector(sel);
+    if (el) {
+      el.click();
+      return;
+    }
+  }
+  console.warn("[promethee] No Webflow waitlist trigger found.");
+}
+
 export default function App() {
   const [open, setOpen] = useState(false);
+  const handleWaitlistClick = () => {
+    openWebflowWaitlist();
+    setOpen(true);
+  };
 
   return (
     <main className="relative w-full min-h-screen overflow-x-hidden flex flex-col font-sans selection:bg-white/20 selection:text-white">
@@ -650,7 +673,7 @@ export default function App() {
               className="mt-9"
             >
               <button
-                onClick={() => setOpen(true)}
+                onClick={handleWaitlistClick}
                 className="liquid-glass rounded-full pl-7 pr-2 py-2 inline-flex items-center gap-4 text-white text-sm group hover:scale-[1.02] transition-transform duration-300"
               >
                 <span className="uppercase tracking-[0.22em] text-xs">Join waitlist</span>
@@ -773,7 +796,7 @@ export default function App() {
                 Built for the augmented human. Step inside before the doors widen.
               </p>
               <button
-                onClick={() => setOpen(true)}
+                onClick={handleWaitlistClick}
                 className="liquid-glass rounded-full pl-7 pr-2 py-2 inline-flex items-center gap-4 text-white text-sm group hover:scale-[1.02] transition-transform duration-300"
               >
                 <span className="uppercase tracking-[0.22em] text-xs">Request access</span>
