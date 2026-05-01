@@ -13,6 +13,7 @@ function PrometheeMark({ size = 22 }) {
 function WaitlistDrawer({ open, onClose }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [terms, setTerms] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const firstFieldRef = useRef(null);
 
@@ -33,7 +34,39 @@ function WaitlistDrawer({ open, onClose }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
+    if (!name.trim() || !email.trim() || !terms) return;
+
+    const wfForm = document.getElementById("wf-form-popup-form");
+    if (wfForm) {
+      const nameInput = wfForm.querySelector('input[name="name"]');
+      const emailInput = wfForm.querySelector('input[name="email"]');
+      const termsInput = wfForm.querySelector('input[name="Terms-Conditions"]');
+      const submitBtn = wfForm.querySelector('input[type="submit"]');
+
+      if (nameInput) {
+        nameInput.value = name;
+        nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+        nameInput.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      if (emailInput) {
+        emailInput.value = email;
+        emailInput.dispatchEvent(new Event("input", { bubbles: true }));
+        emailInput.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      if (termsInput && !termsInput.checked) {
+        termsInput.checked = true;
+        termsInput.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+
+      if (submitBtn) {
+        submitBtn.click();
+      } else {
+        wfForm.submit();
+      }
+    } else {
+      console.warn("[promethee] Webflow form #wf-form-popup-form not found");
+    }
+
     setSubmitted(true);
   };
 
@@ -119,9 +152,23 @@ function WaitlistDrawer({ open, onClose }) {
                         />
                       </div>
 
+                      <label className="mt-2 flex items-start gap-3 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={terms}
+                          onChange={(e) => setTerms(e.target.checked)}
+                          required
+                          className="mt-0.5 w-4 h-4 rounded border border-white/20 bg-white/5 accent-white shrink-0 cursor-pointer"
+                        />
+                        <span className="text-[11px] text-white/50 leading-relaxed">
+                          I agree to receive emails from Promethee and acknowledge the privacy policy and legal notice.
+                        </span>
+                      </label>
+
                       <button
                         type="submit"
-                        className="mt-4 group relative overflow-hidden rounded-full bg-white text-black h-14 flex items-center justify-center gap-2 text-sm font-medium tracking-wide transition-transform active:scale-[0.99]"
+                        disabled={!terms || !name.trim() || !email.trim()}
+                        className="mt-4 group relative overflow-hidden rounded-full bg-white text-black h-14 flex items-center justify-center gap-2 text-sm font-medium tracking-wide transition-transform active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <span className="uppercase tracking-[0.18em] text-xs">Request access</span>
                         <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
@@ -587,31 +634,9 @@ function HeroBackground() {
   );
 }
 
-function openWebflowWaitlist() {
-  if (typeof window === "undefined") return;
-  const selectors = [
-    ".hero__btn",
-    ".hero__btn .btn_wrap",
-    "[data-modal-open]",
-    ".sticky_btn",
-    ".sticky_btn .btn_wrap",
-  ];
-  for (const sel of selectors) {
-    const el = window.parent?.document?.querySelector?.(sel) || document.querySelector(sel);
-    if (el) {
-      el.click();
-      return;
-    }
-  }
-  console.warn("[promethee] No Webflow waitlist trigger found.");
-}
-
 export default function App() {
   const [open, setOpen] = useState(false);
-  const handleWaitlistClick = () => {
-    openWebflowWaitlist();
-    setOpen(true);
-  };
+  const handleWaitlistClick = () => setOpen(true);
 
   return (
     <main className="relative w-full min-h-screen overflow-x-hidden flex flex-col font-sans selection:bg-white/20 selection:text-white">
