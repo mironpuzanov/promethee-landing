@@ -615,9 +615,7 @@ function HeroBackground() {
   const filter = useTransform(blur, (b) => `blur(${b}px) saturate(1.12)`);
   const y      = useTransform(scrollY, [0, vh * 2], [0, isMobile ? -80 : -140]);
 
-  const bgUrl = isMobile
-    ? "https://promethee-landing.vercel.app/assets/landing_background_sm.webp"
-    : "https://promethee-landing.vercel.app/assets/landing_background_lg.webp";
+  const bgUrl = "https://promethee-landing.vercel.app/assets/landing_background.png";
 
   return (
     <div className="fixed inset-0 z-[0] overflow-hidden">
