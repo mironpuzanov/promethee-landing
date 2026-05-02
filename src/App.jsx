@@ -165,7 +165,7 @@ function WaitlistDrawer({ open, onClose }) {
                         Join the waitlist.
                       </h2>
                       <p className="text-white/55 text-sm mt-4 leading-relaxed max-w-sm">
-                        Be among the first to step into the new era. We'll reach out when your seat is ready.
+                        Be among the first to step into the new era.<br />We'll reach out when your seat is ready.
                       </p>
                     </div>
 
@@ -176,7 +176,7 @@ function WaitlistDrawer({ open, onClose }) {
                           ref={firstFieldRef}
                           className="field"
                           type="text"
-                          placeholder="Ada Lovelace"
+                          placeholder="Your name"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           required
@@ -187,7 +187,7 @@ function WaitlistDrawer({ open, onClose }) {
                         <input
                           className="field"
                           type="email"
-                          placeholder="ada@notes.com"
+                          placeholder="you@email.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           required
@@ -741,25 +741,54 @@ function BentoFeatureCard({ delay = 0 }) {
 }
 
 function HeroBackground() {
-  const { scrollY } = useScroll();
-  const [dims, setDims] = useState(() => ({
-    vh: typeof window !== "undefined" ? window.innerHeight : 800,
-    isMobile: typeof window !== "undefined" && window.innerWidth < 768,
-  }));
+  const elRef = useRef(null);
+
   useEffect(() => {
-    const onResize = () => setDims({ vh: window.innerHeight, isMobile: window.innerWidth < 768 });
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
+    let rafId = 0;
+    let mounted = true;
+
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+    const tick = () => {
+      if (!mounted) return;
+      const el = elRef.current;
+      if (!el) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+      const vh = window.innerHeight || 800;
+      const isMobile = window.innerWidth < 768;
+      const sy = window.scrollY || window.pageYOffset || 0;
+
+      // Match previous Framer Motion curves:
+      //   scale: [0, vh*2] → [1, isMobile ? 1.15 : 1.25]
+      //   y:     [0, vh*2] → [0, isMobile ? -80 : -140]
+      //   blur:  [0, vh*0.3, vh*1.6] → [0, 0, isMobile ? 0 : 36]
+      const t = clamp01(sy / (vh * 2));
+      const scale = lerp(1, isMobile ? 1.15 : 1.25, t);
+      const ty = lerp(0, isMobile ? -80 : -140, t);
+
+      let blurPx = 0;
+      if (!isMobile) {
+        const bStart = vh * 0.3;
+        const bEnd = vh * 1.6;
+        const bt = clamp01((sy - bStart) / (bEnd - bStart));
+        blurPx = lerp(0, 36, bt);
+      }
+
+      el.style.transform = `translate3d(0, ${ty}px, 0) scale(${scale})`;
+      el.style.filter = isMobile ? "" : `blur(${blurPx}px) saturate(1.12)`;
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
     return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
+      mounted = false;
+      cancelAnimationFrame(rafId);
     };
   }, []);
-  const { vh, isMobile } = dims;
-  const scale  = useTransform(scrollY, [0, vh * 2], [1, isMobile ? 1.15 : 1.25]);
-  const blur   = useTransform(scrollY, [0, vh * 0.3, vh * 1.6], [0, 0, isMobile ? 0 : 36]);
-  const filter = useTransform(blur, (b) => `blur(${b}px) saturate(1.12)`);
-  const y      = useTransform(scrollY, [0, vh * 2], [0, isMobile ? -80 : -140]);
 
   const bgUrl = import.meta.env.DEV
     ? "/assets/landing_background.png"
@@ -767,17 +796,14 @@ function HeroBackground() {
 
   return (
     <div className="fixed inset-0 z-[0] overflow-hidden">
-      <motion.div
+      <div
+        ref={elRef}
         className="absolute -inset-20"
         style={{
           backgroundImage: `url('${bgUrl}')`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          scale,
-          filter: isMobile ? undefined : filter,
-          y,
-          transform: "translateZ(0)",
-          willChange: "transform",
+          willChange: "transform, filter",
           backfaceVisibility: "hidden",
         }}
       />
