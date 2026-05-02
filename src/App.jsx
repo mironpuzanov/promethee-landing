@@ -655,8 +655,6 @@ function SessionHUD() {
           <span className="text-white">+190</span>
           <span style={{ color: "#ff5a3a" }} className="text-[11px]">XP</span>
         </span>
-        <span className="w-px h-4 bg-white/10" />
-        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">Lv 23</span>
         <span className="flex-1" />
 
         <button
@@ -832,26 +830,31 @@ function HeroBackground() {
       }
       const sy = smoothedSy;
 
-      // Tightened mobile range for visual smoothness — bigger per-pixel delta
-      // means chunky mobile scroll updates look proportionally smaller.
-      //   scale: mobile [0, vh] → [1, 1.08],  desktop [0, vh*2] → [1, 1.25]
-      //   y:     mobile [0, vh] → [0, -50],   desktop [0, vh*2] → [0, -140]
+      // Mobile: translate-only — no per-frame scale (avoids GPU texture
+      // resampling) and no filter. Image is pre-scaled to 1.08 statically
+      // via CSS, so we only animate translate3d. iOS Safari delivers
+      // scrollY in chunks during momentum scroll; pure translate hides
+      // those chunks far better than animated scale does.
+      // Desktop: unchanged — scale + translate + blur.
+      //   y:     mobile [0, vh] → [0, -60],   desktop [0, vh*2] → [0, -140]
+      //   scale: desktop [0, vh*2] → [1, 1.25] (mobile is static 1.08)
       //   blur:  desktop only, [vh*0.3, vh*1.6] → [0, 36]
       const tRange = isMobile ? vh : vh * 2;
       const t = clamp01(sy / tRange);
-      const scale = lerp(1, isMobile ? 1.08 : 1.25, t);
-      const ty = lerp(0, isMobile ? -50 : -140, t);
+      const ty = lerp(0, isMobile ? -60 : -140, t);
 
-      let blurPx = 0;
-      if (!isMobile) {
+      if (isMobile) {
+        el.style.transform = `translate3d(0, ${ty}px, 0)`;
+        el.style.filter = "";
+      } else {
+        const scale = lerp(1, 1.25, t);
         const bStart = vh * 0.3;
         const bEnd = vh * 1.6;
         const bt = clamp01((sy - bStart) / (bEnd - bStart));
-        blurPx = lerp(0, 36, bt);
+        const blurPx = lerp(0, 36, bt);
+        el.style.transform = `translate3d(0, ${ty}px, 0) scale(${scale})`;
+        el.style.filter = `blur(${blurPx}px) saturate(1.12)`;
       }
-
-      el.style.transform = `translate3d(0, ${ty}px, 0) scale(${scale})`;
-      el.style.filter = isMobile ? "" : `blur(${blurPx}px) saturate(1.12)`;
 
       rafId = requestAnimationFrame(tick);
     };
@@ -873,7 +876,7 @@ function HeroBackground() {
     <div className="fixed inset-0 z-[0] overflow-hidden">
       <div
         ref={elRef}
-        className="absolute -inset-20"
+        className="hero-bg-image absolute -inset-20"
         style={{
           backgroundImage: `url('${bgUrl}')`,
           backgroundSize: "cover",
@@ -907,7 +910,7 @@ export default function App() {
           </header>
 
           <section className="flex-1 relative">
-            <div className="absolute left-0 right-0 bottom-[30%] flex flex-col items-center text-center gap-8 md:flex-row md:items-end md:justify-between md:text-left md:gap-6">
+            <div className="absolute left-0 right-0 bottom-[12%] md:bottom-[30%] flex flex-col items-center text-center gap-8 md:flex-row md:items-end md:justify-between md:text-left md:gap-6">
               <motion.h1
                 key="headline"
                 initial={{ opacity: 0, y: 24 }}

@@ -114,3 +114,13 @@ input.field:focus {
   width: 0%;
   animation: ambient-sweep 3.2s ease-in-out infinite;
 }
+
+/* Mobile parallax: pre-scale background statically so the rAF loop only
+   has to animate translate3d. Avoids per-frame texture resampling that
+   makes scale animation visibly jumpy during iOS momentum scroll. */
+@media (max-width: 767px) {
+  .hero-bg-image {
+    transform-origin: center center;
+    background-size: 116% auto;
+  }
+}
