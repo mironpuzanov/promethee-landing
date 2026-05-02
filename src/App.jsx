@@ -1,6 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
-import { X, Check, ArrowRight, ArrowUpRight } from "lucide-react";
+import { X, Check, ArrowRight, ArrowUpRight, Copy } from "lucide-react";
+import { claimWaitlistPosition } from "./supabase.js";
+
+function getReferrerCode() {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("ref") || null;
+}
+
+function buildShareUrl(code) {
+  if (typeof window === "undefined") return `?ref=${code}`;
+  const origin =
+    window.location.host && !window.location.host.includes("vercel.app") && !window.location.host.includes("localhost")
+      ? `${window.location.protocol}//${window.location.host}`
+      : "https://promethee.io";
+  return `${origin}/?ref=${code}`;
+}
 
 function PrometheeMark({ size = 22 }) {
   return (
@@ -15,6 +31,9 @@ function WaitlistDrawer({ open, onClose }) {
   const [email, setEmail] = useState("");
   const [terms, setTerms] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState(null); // { position, referralCode, shareUrl }
+  const [copied, setCopied] = useState(false);
   const firstFieldRef = useRef(null);
 
   useEffect(() => {
@@ -27,15 +46,21 @@ function WaitlistDrawer({ open, onClose }) {
 
   useEffect(() => {
     if (!open) {
-      const t = setTimeout(() => setSubmitted(false), 400);
+      const t = setTimeout(() => {
+        setSubmitted(false);
+        setResult(null);
+        setCopied(false);
+      }, 400);
       return () => clearTimeout(t);
     }
   }, [open]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !terms) return;
+    if (!name.trim() || !email.trim() || !terms || submitting) return;
+    setSubmitting(true);
 
+    // 1. Submit to Webflow form (keeps Zapier flow alive)
     const wfForm = document.getElementById("wf-form-popup-form");
     if (wfForm) {
       const nameInput = wfForm.querySelector('input[name="name"]');
@@ -58,16 +83,37 @@ function WaitlistDrawer({ open, onClose }) {
         termsInput.dispatchEvent(new Event("change", { bubbles: true }));
       }
 
-      if (submitBtn) {
-        submitBtn.click();
-      } else {
-        wfForm.submit();
-      }
+      if (submitBtn) submitBtn.click();
+      else wfForm.submit();
     } else {
       console.warn("[promethee] Webflow form #wf-form-popup-form not found");
     }
 
+    // 2. Claim Supabase position + referral code
+    try {
+      const referredBy = getReferrerCode();
+      const { position, referralCode } = await claimWaitlistPosition({ email, name, referredBy });
+      setResult({
+        position,
+        referralCode,
+        shareUrl: buildShareUrl(referralCode),
+      });
+    } catch (err) {
+      console.warn("[promethee] Supabase waitlist claim failed:", err);
+      setResult(null); // success view will fall back to generic message
+    }
+
     setSubmitted(true);
+    setSubmitting(false);
+  };
+
+  const handleCopy = async () => {
+    if (!result) return;
+    try {
+      await navigator.clipboard.writeText(result.shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
   };
 
   return (
@@ -93,11 +139,7 @@ function WaitlistDrawer({ open, onClose }) {
             className="drawer-glass fixed top-0 right-0 bottom-0 z-50 w-full sm:w-[460px] flex flex-col"
             style={{ borderLeft: "1px solid rgba(255,255,255,0.08)" }}
           >
-            <div className="flex items-center justify-between px-8 pt-8 pb-6">
-              <div className="flex items-center gap-2.5 text-white">
-                <PrometheeMark size={20} />
-                <span className="text-[11px] uppercase tracking-[0.3em] text-white/60">Promethee</span>
-              </div>
+            <div className="flex items-center justify-end px-8 pt-8 pb-6">
               <button
                 onClick={onClose}
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
@@ -120,7 +162,7 @@ function WaitlistDrawer({ open, onClose }) {
                   >
                     <div className="mt-6">
                       <h2 className="text-white text-3xl md:text-4xl font-medium tracking-tight leading-[1.05]">
-                        Join the<br />waitlist.
+                        Join the waitlist.
                       </h2>
                       <p className="text-white/55 text-sm mt-4 leading-relaxed max-w-sm">
                         Be among the first to step into the new era. We'll reach out when your seat is ready.
@@ -167,22 +209,14 @@ function WaitlistDrawer({ open, onClose }) {
 
                       <button
                         type="submit"
-                        disabled={!terms || !name.trim() || !email.trim()}
+                        disabled={!terms || !name.trim() || !email.trim() || submitting}
                         className="mt-4 group relative overflow-hidden rounded-full bg-white text-black h-14 flex items-center justify-center gap-2 text-sm font-medium tracking-wide transition-transform active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        <span className="uppercase tracking-[0.18em] text-xs">Request access</span>
-                        <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+                        <span className="uppercase tracking-[0.18em] text-xs">{submitting ? "Joining…" : "Join"}</span>
+                        {!submitting && <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />}
                       </button>
 
-                      <p className="text-[10px] uppercase tracking-[0.22em] text-white/30 mt-3 text-center">
-                        No spam. One email when we open.
-                      </p>
                     </form>
-
-                    <div className="mt-auto pt-8 border-t border-white/8 text-[10px] uppercase tracking-[0.25em] text-white/30 flex items-center justify-between">
-                      <span>v 0.1 · Private alpha</span>
-                      <span>Spring 2026</span>
-                    </div>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -196,12 +230,57 @@ function WaitlistDrawer({ open, onClose }) {
                     <div className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center">
                       <Check size={20} strokeWidth={2.25} />
                     </div>
-                    <h2 className="text-white text-3xl md:text-4xl font-medium tracking-tight leading-[1.05] mt-6">
-                      You're on the list.
-                    </h2>
-                    <p className="text-white/55 text-sm mt-4 leading-relaxed max-w-sm">
-                      Thank you, {name.split(" ")[0] || "friend"}. We'll send a single, quiet email to <span className="text-white/80">{email}</span> when it's time.
-                    </p>
+
+                    {result?.position ? (
+                      <>
+                        <h2 className="text-white text-3xl md:text-4xl font-medium tracking-tight leading-[1.05] mt-6">
+                          You're #{result.position.toLocaleString()}<br />in line.
+                        </h2>
+                        <p className="text-white/55 text-sm mt-4 leading-relaxed max-w-sm">
+                          Move up by sharing your link. Each invite jumps you 10% closer to the top.
+                        </p>
+
+                        <div className="mt-6 w-full">
+                          <label className="text-[10px] uppercase tracking-[0.25em] text-white/40 ml-1">Your link</label>
+                          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] pl-4 pr-2 py-2">
+                            <span className="flex-1 truncate text-white/80 text-[13px] font-mono">
+                              {result.shareUrl.replace(/^https?:\/\//, "")}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleCopy}
+                              className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-white text-black px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition-transform active:scale-[0.97]"
+                            >
+                              {copied ? (
+                                <>
+                                  <Check size={13} strokeWidth={2.5} />
+                                  Copied
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={13} strokeWidth={2} />
+                                  Copy
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <p className="text-white/40 text-[12px] mt-6 leading-relaxed">
+                          We'll email <span className="text-white/70">{email}</span> when it's your turn.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <h2 className="text-white text-3xl md:text-4xl font-medium tracking-tight leading-[1.05] mt-6">
+                          You're on the list.
+                        </h2>
+                        <p className="text-white/55 text-sm mt-4 leading-relaxed max-w-sm">
+                          Thank you, {name.split(" ")[0] || "friend"}. We'll email <span className="text-white/80">{email}</span> when it's time.
+                        </p>
+                      </>
+                    )}
+
                     <button
                       onClick={onClose}
                       className="mt-10 text-[11px] uppercase tracking-[0.25em] text-white/50 hover:text-white transition-colors"
@@ -273,12 +352,8 @@ function AmbientPill() {
         </button>
 
         <div className="flex-1 min-w-0 leading-tight">
-          <div className="text-white text-[13px] font-semibold tracking-tight flex items-center gap-2">
+          <div className="text-white text-[13px] font-semibold tracking-tight">
             <span>Working detected</span>
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-400" />
-            </span>
           </div>
           <div className="text-white/45 text-[11px] -mt-0.5">Cursor</div>
         </div>
@@ -306,9 +381,9 @@ function AmbientPill() {
 
 function ProgressionWidget() {
   return (
-    <div className="relative w-full max-w-[420px] mx-auto flex flex-col gap-3">
-      <div className="px-1 flex items-center gap-3">
-        <span className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-medium tabular-nums">Lv 23</span>
+    <div className="relative w-full max-w-[420px] mx-auto flex flex-col gap-2">
+      <div className="px-1 flex items-center gap-3 mb-1">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-medium tabular-nums">Level 23</span>
         <div className="flex-1 h-1 rounded-full overflow-hidden relative" style={{ background: "rgba(255,255,255,0.06)" }}>
           <div className="absolute inset-y-0 left-0 rounded-full" style={{
             width: "62%",
@@ -316,9 +391,26 @@ function ProgressionWidget() {
             boxShadow: "0 0 10px rgba(240,72,38,0.55)",
           }} />
         </div>
-        <span className="text-[10px] uppercase tracking-[0.18em] text-white/30 font-medium tabular-nums">Lv 24</span>
       </div>
 
+      {/* #13 — faded above */}
+      <div
+        className="rounded-2xl px-4 py-2.5 flex items-center gap-3 opacity-35"
+        style={{
+          background: "linear-gradient(180deg, #16161a 0%, #0c0c0f 100%)",
+          border: "1px solid rgba(255,255,255,0.05)",
+        }}
+      >
+        <span className="text-white/40 text-[11px] font-semibold tabular-nums w-7">#13</span>
+        <div className="w-6 h-6 rounded-full shrink-0" style={{ background: "linear-gradient(135deg,#3a3a40,#1a1a1d)" }} />
+        <div className="flex-1 min-w-0 text-white/70 text-[12px] font-semibold tracking-tight truncate">M.</div>
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold tabular-nums text-white/55">
+          <svg width="9" height="11" viewBox="0 0 10 12" fill="currentColor"><path d="M6 0L0 7h3l-1 5 6-7H5l1-5z" /></svg>
+          4,890
+        </span>
+      </div>
+
+      {/* #14 — You, highlighted */}
       <div
         className="rounded-2xl px-4 py-3 flex items-center gap-3"
         style={{
@@ -352,6 +444,23 @@ function ProgressionWidget() {
             6.3h
           </span>
         </div>
+      </div>
+
+      {/* #15 — faded below */}
+      <div
+        className="rounded-2xl px-4 py-2.5 flex items-center gap-3 opacity-35"
+        style={{
+          background: "linear-gradient(180deg, #16161a 0%, #0c0c0f 100%)",
+          border: "1px solid rgba(255,255,255,0.05)",
+        }}
+      >
+        <span className="text-white/40 text-[11px] font-semibold tabular-nums w-7">#15</span>
+        <div className="w-6 h-6 rounded-full shrink-0" style={{ background: "linear-gradient(135deg,#3a3a40,#1a1a1d)" }} />
+        <div className="flex-1 min-w-0 text-white/70 text-[12px] font-semibold tracking-tight truncate">K.</div>
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold tabular-nums text-white/55">
+          <svg width="9" height="11" viewBox="0 0 10 12" fill="currentColor"><path d="M6 0L0 7h3l-1 5 6-7H5l1-5z" /></svg>
+          4,420
+        </span>
       </div>
     </div>
   );
@@ -486,7 +595,7 @@ function HeatmapWidget() {
                 {col.map((lvl, d) => (
                   <div
                     key={d}
-                    className="flex-1 rounded-[2px] aspect-square"
+                    className="flex-1 rounded-[2px] aspect-square cursor-pointer transition-all duration-150 hover:scale-[1.6] hover:z-10 relative hover:!shadow-[0_0_10px_rgba(255,122,90,0.9)]"
                     style={{
                       background: colors[lvl],
                       boxShadow: lvl === 4 ? "0 0 6px rgba(240,72,38,0.6)" : "none",
@@ -566,6 +675,30 @@ function SessionHUD() {
   );
 }
 
+function MentorMessage() {
+  return (
+    <div className="relative w-full max-w-[360px] mx-auto">
+      <div
+        className="rounded-2xl px-4 py-3"
+        style={{
+          background: "linear-gradient(180deg, rgba(20,20,24,0.85) 0%, rgba(8,8,11,0.85) 100%)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
+        }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[10px] uppercase tracking-[0.22em] text-white/45 font-semibold">Mentor</span>
+        </div>
+        <p className="text-white/75 text-[13px] leading-relaxed">
+          You're sharper after deep blocks. Want to try a 90-min stretch tomorrow morning?
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function BentoFeatureCard({ delay = 0 }) {
   return (
     <motion.div
@@ -590,8 +723,9 @@ function BentoFeatureCard({ delay = 0 }) {
         WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
       }} />
 
-      <div className="relative z-10 flex-1 flex items-center justify-center px-7 pt-10">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-4 px-7 pt-10">
         <SessionHUD />
+        <MentorMessage />
       </div>
 
       <div className="relative z-10 px-7 md:px-8 pb-8 text-center">
@@ -599,7 +733,7 @@ function BentoFeatureCard({ delay = 0 }) {
           A new kind of software.
         </h4>
         <p className="text-white/55 text-sm mt-3 max-w-[34ch] mx-auto">
-          Always-on. Quiet. Built for the augmented human.
+          Built for the one who cares.
         </p>
       </div>
     </motion.div>
@@ -608,14 +742,28 @@ function BentoFeatureCard({ delay = 0 }) {
 
 function HeroBackground() {
   const { scrollY } = useScroll();
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  const [dims, setDims] = useState(() => ({
+    vh: typeof window !== "undefined" ? window.innerHeight : 800,
+    isMobile: typeof window !== "undefined" && window.innerWidth < 768,
+  }));
+  useEffect(() => {
+    const onResize = () => setDims({ vh: window.innerHeight, isMobile: window.innerWidth < 768 });
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, []);
+  const { vh, isMobile } = dims;
   const scale  = useTransform(scrollY, [0, vh * 2], [1, isMobile ? 1.15 : 1.25]);
   const blur   = useTransform(scrollY, [0, vh * 0.3, vh * 1.6], [0, 0, isMobile ? 0 : 36]);
   const filter = useTransform(blur, (b) => `blur(${b}px) saturate(1.12)`);
   const y      = useTransform(scrollY, [0, vh * 2], [0, isMobile ? -80 : -140]);
 
-  const bgUrl = "https://promethee-landing.vercel.app/assets/landing_background.png";
+  const bgUrl = import.meta.env.DEV
+    ? "/assets/landing_background.png"
+    : "https://promethee-landing.vercel.app/assets/landing_background.png";
 
   return (
     <div className="fixed inset-0 z-[0] overflow-hidden">
@@ -645,21 +793,20 @@ export default function App() {
     <main className="relative w-full min-h-screen overflow-x-hidden flex flex-col font-sans selection:bg-white/20 selection:text-white">
       <HeroBackground />
       <div className="fixed inset-0 z-[1] pointer-events-none" style={{
-        background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%)"
+        background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%)"
       }} />
 
       <div className="relative z-10 w-full flex flex-col">
         <div className="snap-section min-h-screen w-full flex flex-col px-6 md:px-10 pt-8 md:pt-10 pb-10">
           <header className="flex items-center justify-between text-white">
-            <div className="flex items-center gap-3">
-              <PrometheeMark size={26} />
-              <span className="text-[13px] tracking-[0.28em] uppercase font-medium">Promethee</span>
+            <div className="flex items-center gap-2.5">
+              <PrometheeMark size={18} />
+              <span className="text-[11px] tracking-[0.28em] uppercase font-medium">Promethee</span>
             </div>
-            <span className="text-[10px] uppercase tracking-[0.3em] text-white/50">Spring 2026</span>
           </header>
 
           <section className="flex-1 relative">
-            <div className="absolute left-0 right-0 bottom-[25%] flex flex-col items-center text-center gap-8 md:flex-row md:items-end md:justify-between md:text-left md:gap-6">
+            <div className="absolute left-0 right-0 bottom-[30%] flex flex-col items-center text-center gap-8 md:flex-row md:items-end md:justify-between md:text-left md:gap-6">
               <motion.h1
                 key="headline"
                 initial={{ opacity: 0, y: 24 }}
@@ -667,7 +814,7 @@ export default function App() {
                 transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
                 className="text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-medium leading-[1.02] tracking-tight max-w-4xl"
               >
-                The new era begins.
+                A new era begins.
               </motion.h1>
 
               <motion.div
@@ -689,29 +836,26 @@ export default function App() {
               </motion.div>
             </div>
 
-            <motion.div
-              key="scroll-hint"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 1.2, delay: 0.8 }}
-              className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/35"
-            >
-              <span className="text-[9px] uppercase tracking-[0.4em]">Scroll</span>
-              <span className="w-px h-8 bg-gradient-to-b from-white/40 to-transparent" />
-            </motion.div>
           </section>
         </div>
 
-        <div
-          className="relative w-full h-32 md:h-48 -mt-10 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.55) 100%)" }}
-        />
-
         <section
-          className="snap-section relative w-full px-6 md:px-10 pb-32"
-          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.7) 30%, rgba(0,0,0,0.78) 100%)" }}
+          className="snap-section relative w-full px-6 md:px-10 pb-32 -mt-[60vh] md:-mt-[70vh] pt-[60vh] md:pt-[70vh] pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,0.15) 28%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0.78) 70%, rgba(0,0,0,0.78) 100%)",
+          }}
         >
-          <div className="max-w-6xl mx-auto pt-16 md:pt-24">
+          <div
+            className="absolute inset-0 pointer-events-none opacity-[0.05] mix-blend-overlay"
+            style={{
+              backgroundImage:
+                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+              maskImage: "linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)",
+            }}
+          />
+          <div className="max-w-6xl mx-auto relative z-10 pointer-events-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -720,22 +864,21 @@ export default function App() {
               className="text-center mb-12 md:mb-16"
             >
               <h2 className="text-white text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.05]">
-                Work is invisible.
+                Effort is invisible.
               </h2>
               <h3 className="text-white/40 text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.05] mt-1">
-                We make it count.
+                We make it real.
               </h3>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 auto-rows-[minmax(220px,auto)]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 md:auto-rows-fr">
               <BentoCard delay={0}>
                 <div className="flex flex-col h-full">
-                  <div className="flex-1 flex items-center justify-center pb-4">
+                  <div className="flex items-center justify-center h-[180px] md:h-[200px] pb-4">
                     <AmbientPill />
                   </div>
                   <div className="border-t border-white/5 pt-5">
-                    <BentoEyebrow>01</BentoEyebrow>
-                    <BentoTitle>Ambient by design</BentoTitle>
+                    <BentoTitle>Ambient</BentoTitle>
                     <p className="text-white/55 text-sm leading-relaxed mt-3 max-w-[28ch]">
                       No start button. The moment you sit down, your work is recorded.
                     </p>
@@ -747,14 +890,13 @@ export default function App() {
 
               <BentoCard delay={0.1}>
                 <div className="flex flex-col h-full">
-                  <div className="flex-1 flex items-center justify-center pb-4">
+                  <div className="flex items-center justify-center h-[180px] md:h-[200px] pb-4">
                     <ProgressionWidget />
                   </div>
                   <div className="border-t border-white/5 pt-5">
-                    <BentoEyebrow>02</BentoEyebrow>
                     <BentoTitle>Visible progression</BentoTitle>
                     <p className="text-white/55 text-sm leading-relaxed mt-3 max-w-[28ch]">
-                      Hours, levels, skills — stacked up so you can see who you are becoming.
+                      You can see who you are becoming.
                     </p>
                   </div>
                 </div>
@@ -762,14 +904,13 @@ export default function App() {
 
               <BentoCard delay={0.15}>
                 <div className="flex flex-col h-full">
-                  <div className="flex-1 flex items-center justify-center pb-4">
+                  <div className="flex items-center justify-center h-[180px] md:h-[200px] pb-4">
                     <CoPresenceWidget />
                   </div>
                   <div className="border-t border-white/5 pt-5">
-                    <BentoEyebrow>03</BentoEyebrow>
                     <BentoTitle>Silent co-presence</BentoTitle>
                     <p className="text-white/55 text-sm leading-relaxed mt-3 max-w-[28ch]">
-                      Others working in silence, alongside you. The accountability of a gym, for the work that matters.
+                      Others working in silence, alongside you.
                     </p>
                   </div>
                 </div>
@@ -777,14 +918,13 @@ export default function App() {
 
               <BentoCard delay={0.2}>
                 <div className="flex flex-col h-full">
-                  <div className="flex-1 flex items-center justify-center pb-4">
+                  <div className="flex items-center justify-center h-[180px] md:h-[200px] pb-4">
                     <HeatmapWidget />
                   </div>
                   <div className="border-t border-white/5 pt-5">
-                    <BentoEyebrow>04</BentoEyebrow>
                     <BentoTitle>Yours, recorded</BentoTitle>
                     <p className="text-white/55 text-sm leading-relaxed mt-3 max-w-[28ch]">
-                      Every focus block, every habit, every streak — proof that you showed up.
+                      Proof that you showed up.
                     </p>
                   </div>
                 </div>
@@ -798,9 +938,6 @@ export default function App() {
               transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col items-center mt-20 md:mt-28 text-center"
             >
-              <p className="text-white/55 text-sm md:text-base max-w-md mb-8 leading-relaxed">
-                Built for the augmented human. Step inside before the doors widen.
-              </p>
               <button
                 onClick={handleWaitlistClick}
                 className="liquid-glass rounded-2xl pl-7 pr-2 py-2 inline-flex items-center gap-4 text-white text-sm group hover:scale-[1.02] transition-transform duration-300"
@@ -811,7 +948,7 @@ export default function App() {
                 </span>
               </button>
               <span className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[10px] uppercase tracking-[0.3em] text-white/30">
-                <span>© Promethee · Spring 2026</span>
+                <span>© Promethee</span>
                 <span className="text-white/15">·</span>
                 <a href="#" className="hover:text-white/70 transition-colors">Privacy</a>
                 <a href="#" className="hover:text-white/70 transition-colors">Terms</a>
