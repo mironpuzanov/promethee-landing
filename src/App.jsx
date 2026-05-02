@@ -1027,13 +1027,13 @@ export default function App() {
                 onClick={handleWaitlistClick}
                 className="liquid-glass rounded-2xl pl-7 pr-2 py-2 inline-flex items-center gap-4 text-white text-sm group hover:scale-[1.02] transition-transform duration-300"
               >
-                <span className="uppercase tracking-[0.22em] text-xs">Request access</span>
+                <span className="uppercase tracking-[0.22em] text-xs">Join waitlist</span>
                 <span className="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center transition-transform duration-300 group-hover:rotate-45">
                   <ArrowUpRight size={15} />
                 </span>
               </button>
               <span className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[10px] uppercase tracking-[0.3em] text-white/30">
-                <span>© Promethee</span>
+                <span>© 2026 Promethee Technologies</span>
                 <span className="text-white/15">·</span>
                 <a
                   href="https://www.promethee.io/legal/mentions-legales"
