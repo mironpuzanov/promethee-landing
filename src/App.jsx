@@ -742,13 +742,15 @@ function BentoFeatureCard({ delay = 0 }) {
 
 function HeroBackground() {
   const elRef = useRef(null);
+  const sentinelRef = useRef(null);
 
   useEffect(() => {
     let rafId = 0;
     let mounted = true;
 
-    // Try to neutralize GSAP ScrollTrigger if it's running on the host page.
-    // Safe no-op if GSAP isn't loaded.
+    // Aggressive ScrollTrigger neutralization. Runs at multiple delays because
+    // GSAP/Slater initialize on different timings depending on network. Also
+    // re-runs on visibility change in case scripts wake up later.
     const killScrollTrigger = () => {
       try {
         if (window.ScrollTrigger?.getAll) {
@@ -760,18 +762,23 @@ function HeroBackground() {
         }
       } catch {}
     };
-    // Run several times because GSAP/Slater initialize on different timings.
     killScrollTrigger();
-    const t1 = setTimeout(killScrollTrigger, 300);
-    const t2 = setTimeout(killScrollTrigger, 1000);
-    const t3 = setTimeout(killScrollTrigger, 2500);
+    const timers = [300, 1000, 2500, 5000, 8000].map((d) => setTimeout(killScrollTrigger, d));
+    document.addEventListener("visibilitychange", killScrollTrigger);
 
     const lerp = (a, b, t) => a + (b - a) * t;
     const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
+    // Read scroll position via DOM measurement of a fixed-page-top sentinel.
+    // This bypasses any scroll-smoothing library that intercepts scroll events
+    // or proxies window.scrollY — getBoundingClientRect() is a layout read,
+    // and -rect.top equals the current document scroll offset.
     const readScrollY = () => {
-      // Fall back through several sources in case scroll smoothing libraries
-      // hijack one of them.
+      const sentinel = sentinelRef.current;
+      if (sentinel) {
+        const rect = sentinel.getBoundingClientRect();
+        return -rect.top;
+      }
       return (
         window.scrollY ||
         window.pageYOffset ||
@@ -819,9 +826,8 @@ function HeroBackground() {
     return () => {
       mounted = false;
       cancelAnimationFrame(rafId);
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
+      timers.forEach(clearTimeout);
+      document.removeEventListener("visibilitychange", killScrollTrigger);
     };
   }, []);
 
@@ -830,19 +836,35 @@ function HeroBackground() {
     : "https://promethee-landing.vercel.app/assets/landing_background.png";
 
   return (
-    <div className="fixed inset-0 z-[0] overflow-hidden">
+    <>
+      {/* Sentinel: sits at document top-left, used to read true scroll offset
+          via getBoundingClientRect() — immune to scroll-smoothing hijacks. */}
       <div
-        ref={elRef}
-        className="absolute -inset-20"
+        ref={sentinelRef}
+        aria-hidden
         style={{
-          backgroundImage: `url('${bgUrl}')`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          willChange: "transform, filter",
-          backfaceVisibility: "hidden",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: 1,
+          height: 1,
+          pointerEvents: "none",
         }}
       />
-    </div>
+      <div className="fixed inset-0 z-[0] overflow-hidden">
+        <div
+          ref={elRef}
+          className="absolute -inset-20"
+          style={{
+            backgroundImage: `url('${bgUrl}')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            willChange: "transform, filter",
+            backfaceVisibility: "hidden",
+          }}
+        />
+      </div>
+    </>
   );
 }
 
