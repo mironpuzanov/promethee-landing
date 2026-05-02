@@ -649,13 +649,12 @@ function SessionHUD() {
             style={{ border: "2px solid #f04826", boxShadow: "0 0 10px rgba(240,72,38,0.6)" }} />
         </div>
 
-        <span className="text-white text-[15px] font-semibold tracking-tight tabular-nums">19:55</span>
+        <span className="flex-1 inline-flex justify-center text-white text-[15px] font-semibold tracking-tight tabular-nums">19:55</span>
         <span className="w-px h-4 bg-white/10" />
-        <span className="inline-flex items-baseline gap-1 text-[13px] font-semibold tabular-nums">
+        <span className="flex-1 inline-flex items-baseline justify-center gap-1 text-[13px] font-semibold tabular-nums">
           <span className="text-white">+190</span>
           <span style={{ color: "#ff5a3a" }} className="text-[11px]">XP</span>
         </span>
-        <span className="flex-1" />
 
         <button
           tabIndex={-1}

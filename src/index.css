@@ -123,4 +123,12 @@ input.field:focus {
     transform-origin: center center;
     background-size: 116% auto;
   }
+
+  /* Drop the backdrop-blur on mobile — on desktop it reads as frosted
+     glass over the parallax image, but on mobile (smaller area, less
+     visible texture behind it) it just looks like a hazy patch. */
+  .liquid-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
