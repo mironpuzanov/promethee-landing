@@ -742,51 +742,69 @@ function BentoFeatureCard({ delay = 0 }) {
 
 function HeroBackground() {
   const elRef = useRef(null);
-  const sentinelRef = useRef(null);
 
   useEffect(() => {
     let rafId = 0;
     let mounted = true;
 
-    // Aggressive ScrollTrigger neutralization. Runs at multiple delays because
-    // GSAP/Slater initialize on different timings depending on network. Also
-    // re-runs on visibility change in case scripts wake up later.
-    const killScrollTrigger = () => {
+    // === Neutralize Lenis + GSAP ScrollTrigger ===
+    // The host Webflow page (Eclipse V2 template) loads Lenis smooth-scroll and
+    // GSAP ScrollTrigger globally. Both interfere with our parallax: Lenis
+    // proxies window.scrollY and animates the body transform, ScrollTrigger
+    // hijacks scroll events. We kill any instance we find and keep checking
+    // because they initialize on different timings.
+    const neutralize = () => {
       try {
+        // Kill GSAP ScrollTrigger
         if (window.ScrollTrigger?.getAll) {
           window.ScrollTrigger.getAll().forEach((t) => t.kill && t.kill());
         }
         if (window.ScrollTrigger?.killAll) window.ScrollTrigger.killAll();
-        if (window.ScrollTrigger?.normalizeScroll) {
-          window.ScrollTrigger.normalizeScroll(false);
+
+        // Find Lenis instances anywhere on window and destroy them
+        for (const key of Object.keys(window)) {
+          const v = window[key];
+          if (v && typeof v === "object" && typeof v.destroy === "function" && typeof v.raf === "function") {
+            try { v.destroy(); } catch {}
+          }
         }
+        // Lenis attaches `data-lenis-prevent` and may set body transform — clear it
+        if (document.documentElement.classList.contains("lenis")) {
+          document.documentElement.classList.remove("lenis", "lenis-smooth", "lenis-scrolling", "lenis-stopped");
+        }
+        if (document.body.style.transform) document.body.style.transform = "";
+        if (document.documentElement.style.transform) document.documentElement.style.transform = "";
       } catch {}
     };
-    killScrollTrigger();
-    const timers = [300, 1000, 2500, 5000, 8000].map((d) => setTimeout(killScrollTrigger, d));
-    document.addEventListener("visibilitychange", killScrollTrigger);
+    neutralize();
+    const timers = [100, 300, 800, 1500, 3000, 5000, 8000].map((d) => setTimeout(neutralize, d));
+    document.addEventListener("visibilitychange", neutralize);
 
     const lerp = (a, b, t) => a + (b - a) * t;
     const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
-    // Read scroll position via DOM measurement of a fixed-page-top sentinel.
-    // This bypasses any scroll-smoothing library that intercepts scroll events
-    // or proxies window.scrollY — getBoundingClientRect() is a layout read,
-    // and -rect.top equals the current document scroll offset.
+    // Read scroll position bypassing any Lenis proxy on window.scrollY.
+    // We grab the native getter from the Window prototype and call it directly.
+    const nativeScrollGetter = (() => {
+      try {
+        const desc = Object.getOwnPropertyDescriptor(window, "scrollY") ||
+          Object.getOwnPropertyDescriptor(Window.prototype, "scrollY");
+        return desc && desc.get ? desc.get : null;
+      } catch { return null; }
+    })();
+
     const readScrollY = () => {
-      const sentinel = sentinelRef.current;
-      if (sentinel) {
-        const rect = sentinel.getBoundingClientRect();
-        return -rect.top;
-      }
-      return (
-        window.scrollY ||
-        window.pageYOffset ||
+      try {
+        if (nativeScrollGetter) {
+          const v = nativeScrollGetter.call(window);
+          if (typeof v === "number") return v;
+        }
+      } catch {}
+      return window.pageYOffset ||
         document.scrollingElement?.scrollTop ||
         document.documentElement?.scrollTop ||
         document.body?.scrollTop ||
-        0
-      );
+        0;
     };
 
     const tick = () => {
@@ -836,35 +854,19 @@ function HeroBackground() {
     : "https://promethee-landing.vercel.app/assets/landing_background.png";
 
   return (
-    <>
-      {/* Sentinel: sits at document top-left, used to read true scroll offset
-          via getBoundingClientRect() — immune to scroll-smoothing hijacks. */}
+    <div className="fixed inset-0 z-[0] overflow-hidden">
       <div
-        ref={sentinelRef}
-        aria-hidden
+        ref={elRef}
+        className="absolute -inset-20"
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: 1,
-          height: 1,
-          pointerEvents: "none",
+          backgroundImage: `url('${bgUrl}')`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          willChange: "transform, filter",
+          backfaceVisibility: "hidden",
         }}
       />
-      <div className="fixed inset-0 z-[0] overflow-hidden">
-        <div
-          ref={elRef}
-          className="absolute -inset-20"
-          style={{
-            backgroundImage: `url('${bgUrl}')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            willChange: "transform, filter",
-            backfaceVisibility: "hidden",
-          }}
-        />
-      </div>
-    </>
+    </div>
   );
 }
 
