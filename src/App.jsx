@@ -807,6 +807,11 @@ function HeroBackground() {
         0;
     };
 
+    // Smoothed scrollY value — lerps toward the real scrollY each frame.
+    // On mobile, browser scroll updates come in bursts; lerping turns those
+    // bursts into smooth motion at the cost of ~80ms of perceived latency.
+    let smoothedSy = readScrollY();
+
     const tick = () => {
       if (!mounted) return;
       const el = elRef.current;
@@ -816,15 +821,26 @@ function HeroBackground() {
       }
       const vh = window.innerHeight || 800;
       const isMobile = window.innerWidth < 768;
-      const sy = readScrollY();
+      const targetSy = readScrollY();
 
-      // Match previous Framer Motion curves:
-      //   scale: [0, vh*2] → [1, isMobile ? 1.15 : 1.25]
-      //   y:     [0, vh*2] → [0, isMobile ? -80 : -140]
-      //   blur:  [0, vh*0.3, vh*1.6] → [0, 0, isMobile ? 0 : 36]
-      const t = clamp01(sy / (vh * 2));
-      const scale = lerp(1, isMobile ? 1.15 : 1.25, t);
-      const ty = lerp(0, isMobile ? -80 : -140, t);
+      // Mobile: ease toward target (smoothing factor 0.18 = ~6 frames to settle).
+      // Desktop: snap directly so parallax tracks scroll 1:1.
+      if (isMobile) {
+        smoothedSy += (targetSy - smoothedSy) * 0.18;
+      } else {
+        smoothedSy = targetSy;
+      }
+      const sy = smoothedSy;
+
+      // Tightened mobile range for visual smoothness — bigger per-pixel delta
+      // means chunky mobile scroll updates look proportionally smaller.
+      //   scale: mobile [0, vh] → [1, 1.08],  desktop [0, vh*2] → [1, 1.25]
+      //   y:     mobile [0, vh] → [0, -50],   desktop [0, vh*2] → [0, -140]
+      //   blur:  desktop only, [vh*0.3, vh*1.6] → [0, 36]
+      const tRange = isMobile ? vh : vh * 2;
+      const t = clamp01(sy / tRange);
+      const scale = lerp(1, isMobile ? 1.08 : 1.25, t);
+      const ty = lerp(0, isMobile ? -50 : -140, t);
 
       let blurPx = 0;
       if (!isMobile) {
