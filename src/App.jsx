@@ -747,8 +747,40 @@ function HeroBackground() {
     let rafId = 0;
     let mounted = true;
 
+    // Try to neutralize GSAP ScrollTrigger if it's running on the host page.
+    // Safe no-op if GSAP isn't loaded.
+    const killScrollTrigger = () => {
+      try {
+        if (window.ScrollTrigger?.getAll) {
+          window.ScrollTrigger.getAll().forEach((t) => t.kill && t.kill());
+        }
+        if (window.ScrollTrigger?.killAll) window.ScrollTrigger.killAll();
+        if (window.ScrollTrigger?.normalizeScroll) {
+          window.ScrollTrigger.normalizeScroll(false);
+        }
+      } catch {}
+    };
+    // Run several times because GSAP/Slater initialize on different timings.
+    killScrollTrigger();
+    const t1 = setTimeout(killScrollTrigger, 300);
+    const t2 = setTimeout(killScrollTrigger, 1000);
+    const t3 = setTimeout(killScrollTrigger, 2500);
+
     const lerp = (a, b, t) => a + (b - a) * t;
     const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+    const readScrollY = () => {
+      // Fall back through several sources in case scroll smoothing libraries
+      // hijack one of them.
+      return (
+        window.scrollY ||
+        window.pageYOffset ||
+        document.scrollingElement?.scrollTop ||
+        document.documentElement?.scrollTop ||
+        document.body?.scrollTop ||
+        0
+      );
+    };
 
     const tick = () => {
       if (!mounted) return;
@@ -759,7 +791,7 @@ function HeroBackground() {
       }
       const vh = window.innerHeight || 800;
       const isMobile = window.innerWidth < 768;
-      const sy = window.scrollY || window.pageYOffset || 0;
+      const sy = readScrollY();
 
       // Match previous Framer Motion curves:
       //   scale: [0, vh*2] → [1, isMobile ? 1.15 : 1.25]
@@ -787,6 +819,9 @@ function HeroBackground() {
     return () => {
       mounted = false;
       cancelAnimationFrame(rafId);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
     };
   }, []);
 
@@ -976,8 +1011,12 @@ export default function App() {
               <span className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[10px] uppercase tracking-[0.3em] text-white/30">
                 <span>© Promethee</span>
                 <span className="text-white/15">·</span>
-                <a href="#" className="hover:text-white/70 transition-colors">Privacy</a>
-                <a href="#" className="hover:text-white/70 transition-colors">Terms</a>
+                <a
+                  href="https://www.promethee.io/legal/mentions-legales"
+                  className="hover:text-white/70 transition-colors"
+                >
+                  Legal
+                </a>
               </span>
             </motion.div>
           </div>
