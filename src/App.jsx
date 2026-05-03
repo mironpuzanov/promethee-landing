@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { X, Check, ArrowRight, ArrowUpRight, Copy } from "lucide-react";
-import { claimWaitlistPosition } from "./supabase.js";
+import { claimWaitlistPosition, isJunkEmail } from "./supabase.js";
 
 function getReferrerCode() {
   if (typeof window === "undefined") return null;
@@ -33,6 +33,7 @@ function WaitlistDrawer({ open, onClose }) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null); // { position, referralCode, shareUrl }
+  const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
   const firstFieldRef = useRef(null);
 
@@ -50,6 +51,7 @@ function WaitlistDrawer({ open, onClose }) {
         setSubmitted(false);
         setResult(null);
         setCopied(false);
+        setErrorMsg("");
       }, 400);
       return () => clearTimeout(t);
     }
@@ -58,9 +60,35 @@ function WaitlistDrawer({ open, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !terms || submitting) return;
+
+    // Pre-flight validation: catch obvious junk before submitting anywhere.
+    // This blocks the Webflow / Zapier submission too — we don't want junk
+    // emails leaking into the marketing pipeline either.
+    if (isJunkEmail(email)) {
+      setErrorMsg("Please enter a real email address.");
+      return;
+    }
+    setErrorMsg("");
     setSubmitting(true);
 
-    // 1. Submit to Webflow form (keeps Zapier flow alive)
+    // 1. Try Supabase first now — if it rejects (rate-limited, duplicate,
+    //    junk pattern we missed), we don't pollute Webflow either.
+    let claimResult = null;
+    try {
+      const referredBy = getReferrerCode();
+      claimResult = await claimWaitlistPosition({ email, name, referredBy });
+    } catch (err) {
+      console.warn("[promethee] Supabase waitlist claim failed:", err);
+      if (err.code === "invalid_email" || err.code === "duplicate" || err.code === "rate_limited") {
+        setErrorMsg(err.message);
+        setSubmitting(false);
+        return;
+      }
+      // Network or unknown error — let the user through to Webflow anyway
+      // so they're not blocked by our infra issues. Fall through.
+    }
+
+    // 2. Submit to Webflow form (keeps Zapier flow alive)
     const wfForm = document.getElementById("wf-form-popup-form");
     if (wfForm) {
       const nameInput = wfForm.querySelector('input[name="name"]');
@@ -89,18 +117,14 @@ function WaitlistDrawer({ open, onClose }) {
       console.warn("[promethee] Webflow form #wf-form-popup-form not found");
     }
 
-    // 2. Claim Supabase position + referral code
-    try {
-      const referredBy = getReferrerCode();
-      const { position, referralCode } = await claimWaitlistPosition({ email, name, referredBy });
+    if (claimResult) {
       setResult({
-        position,
-        referralCode,
-        shareUrl: buildShareUrl(referralCode),
+        position: claimResult.position,
+        referralCode: claimResult.referralCode,
+        shareUrl: buildShareUrl(claimResult.referralCode),
       });
-    } catch (err) {
-      console.warn("[promethee] Supabase waitlist claim failed:", err);
-      setResult(null); // success view will fall back to generic message
+    } else {
+      setResult(null); // success view falls back to generic thank-you
     }
 
     setSubmitted(true);
@@ -206,6 +230,12 @@ function WaitlistDrawer({ open, onClose }) {
                           I agree to receive emails from Promethee and acknowledge the privacy policy and legal notice.
                         </span>
                       </label>
+
+                      {errorMsg && (
+                        <div className="text-[12px] text-red-300/90 mt-1 px-1 leading-relaxed">
+                          {errorMsg}
+                        </div>
+                      )}
 
                       <button
                         type="submit"
