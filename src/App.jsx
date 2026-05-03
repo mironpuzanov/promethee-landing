@@ -323,7 +323,7 @@ function BentoEyebrow({ children }) {
   return <span className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-medium">{children}</span>;
 }
 function BentoTitle({ children }) {
-  return <div className="text-white text-xl md:text-[22px] font-medium tracking-tight leading-tight mt-3">{children}</div>;
+  return <h4 className="text-white text-xl md:text-[22px] font-medium tracking-tight leading-tight mt-3">{children}</h4>;
 }
 
 function AmbientPill() {
@@ -726,9 +726,9 @@ function BentoFeatureCard({ delay = 0, order = "" }) {
       </div>
 
       <div className="relative z-10 px-7 md:px-8 pb-8 text-center">
-        <div className="text-white text-2xl md:text-3xl font-medium tracking-tight leading-tight">
+        <h4 className="text-white text-2xl md:text-3xl font-medium tracking-tight leading-tight">
           A new kind of software.
-        </div>
+        </h4>
         <p className="text-white/55 text-sm mt-3 max-w-[34ch] mx-auto">
           Built for the one who cares.
         </p>

@@ -116,38 +116,6 @@ input.field:focus {
   animation: ambient-sweep 3.2s ease-in-out infinite;
 }
 
-/* Webflow's host page (Eclipse V2 template) adds background/clip-path
-   reveal animations to headings globally. Reset everything on headings
-   inside our app so those animations can't bleed through. */
-#root h1,
-#root h2,
-#root h3,
-#root h4,
-#root h5,
-#root h6 {
-  background: transparent !important;
-  background-image: none !important;
-  -webkit-text-fill-color: currentColor;
-  clip-path: none !important;
-  -webkit-clip-path: none !important;
-  animation: none !important;
-}
-#root h1::before,
-#root h2::before,
-#root h3::before,
-#root h4::before,
-#root h5::before,
-#root h6::before,
-#root h1::after,
-#root h2::after,
-#root h3::after,
-#root h4::after,
-#root h5::after,
-#root h6::after {
-  display: none !important;
-  content: none !important;
-}
-
 /* Mobile: drop the backdrop-blur on the join-waitlist pill. On desktop
    it reads as frosted glass; on mobile it looks like a hazy patch. */
 @media (max-width: 767px) {
