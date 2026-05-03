@@ -116,9 +116,35 @@ input.field:focus {
   animation: ambient-sweep 3.2s ease-in-out infinite;
 }
 
-/* Mobile: drop the backdrop-blur on the join-waitlist pill. On desktop
-   it reads as frosted glass; on mobile it looks like a hazy patch. */
+/* Hero background wrapper.
+   Desktop: position:fixed so the background stays put while content
+            scrolls — needed for our parallax effect.
+   Mobile:  position:absolute pinned to top of <main>, height:100vh.
+            We use absolute (not fixed) because Webflow's host page
+            applies transforms/filters to ancestor elements, which on
+            iOS Safari demotes any descendant 'position: fixed' to
+            effectively 'position: absolute' — making the background
+            scroll WITH content and look like (broken) parallax.
+            absolute makes the behavior deterministic: image stays at
+            top of <main> and scrolls off as you read. No parallax,
+            but also no jitter and no iOS surprises. */
+.hero-bg-wrap {
+  position: fixed;
+  inset: 0;
+}
 @media (max-width: 767px) {
+  .hero-bg-wrap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    height: 100vh;
+    height: 100svh;
+  }
+
+  /* Mobile: drop the backdrop-blur on the join-waitlist pill. On desktop
+     it reads as frosted glass; on mobile it looks like a hazy patch. */
   .liquid-glass {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;

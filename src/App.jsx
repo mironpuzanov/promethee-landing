@@ -749,14 +749,71 @@ function HeroBackground() {
     let rafId = 0;
     let mounted = true;
 
-    // === Neutralize Lenis + GSAP ScrollTrigger ===
-    // The host Webflow page (Eclipse V2 template) loads Lenis smooth-scroll and
-    // GSAP ScrollTrigger globally. Both interfere with our parallax: Lenis
-    // proxies window.scrollY and animates the body transform, ScrollTrigger
-    // hijacks scroll events. We kill any instance we find and keep checking
-    // because they initialize on different timings.
+    // === Neutralize Lenis + GSAP ScrollTrigger + SplitText ===
+    // The host Webflow page (Eclipse V2 template) loads Lenis smooth-scroll,
+    // GSAP ScrollTrigger, and GSAP SplitText globally. We must neutralize all
+    // three:
+    //  - Lenis proxies window.scrollY and animates the body transform (breaks
+    //    our parallax math).
+    //  - ScrollTrigger hijacks scroll events (also breaks parallax).
+    //  - SplitText runs on page load and wraps text inside <h1>–<h6> with
+    //    pre-styled spans (grey background, clipped text) that GSAP+ScrollTrigger
+    //    is supposed to animate away. Since we kill ScrollTrigger, those spans
+    //    stay in their grey 'pre-animation' state, which is what the user sees
+    //    as grey bars behind 'Ambient', 'Visible progression', etc.
+    //
+    // SplitText fix: stub the SplitText constructor to a no-op so it never
+    // wraps anything. Also unwrap any spans that managed to slip in before
+    // our stub took effect (race condition: SplitText may run before our
+    // React mounts).
+    const NoopSplitText = function () {
+      return { revert: function () {}, words: [], lines: [], chars: [], split: function () {} };
+    };
+    const installSplitTextStub = () => {
+      try {
+        Object.defineProperty(window, "SplitText", {
+          configurable: true,
+          get: function () { return NoopSplitText; },
+          set: function () {},
+        });
+      } catch {}
+      try {
+        if (window.gsap && typeof window.gsap.registerPlugin === "function") {
+          const orig = window.gsap.registerPlugin;
+          window.gsap.registerPlugin = function (...plugins) {
+            const filtered = plugins.filter((p) => {
+              const name = (p && (p.name || (p.prototype && p.prototype.constructor && p.prototype.constructor.name))) || "";
+              return name !== "SplitText";
+            });
+            return orig.apply(window.gsap, filtered);
+          };
+        }
+      } catch {}
+    };
+
+    // Unwrap any SplitText-injected spans inside our embed root.
+    // SplitText wraps each line/word/char in a span that has inline styles
+    // like `display: block; text-align: start; position: relative;` and a
+    // class such as `split-line`, `split-word`, `split-char`, `line`, `word`,
+    // `char`. When ScrollTrigger never fires, the wrappers retain a clipping
+    // overflow:hidden + an inner <span> translated off-screen — the visible
+    // residue reads as a grey bar.
+    const unwrapSplitSpans = (root) => {
+      if (!root) return;
+      const sel = ".split-line, .split-word, .split-char, .word, .line, .char, [data-split], [data-splittext]";
+      const spans = root.querySelectorAll(sel);
+      spans.forEach((span) => {
+        const parent = span.parentNode;
+        if (!parent) return;
+        while (span.firstChild) parent.insertBefore(span.firstChild, span);
+        parent.removeChild(span);
+      });
+    };
+
     const neutralize = () => {
       try {
+        installSplitTextStub();
+
         // Kill GSAP ScrollTrigger
         if (window.ScrollTrigger?.getAll) {
           window.ScrollTrigger.getAll().forEach((t) => t.kill && t.kill());
@@ -776,11 +833,26 @@ function HeroBackground() {
         }
         if (document.body.style.transform) document.body.style.transform = "";
         if (document.documentElement.style.transform) document.documentElement.style.transform = "";
+
+        // Unwrap any spans SplitText already injected into our embed
+        unwrapSplitSpans(document.getElementById("promethee-root") || document.body);
       } catch {}
     };
     neutralize();
     const timers = [100, 300, 800, 1500, 3000, 5000, 8000].map((d) => setTimeout(neutralize, d));
     document.addEventListener("visibilitychange", neutralize);
+
+    // MutationObserver: if SplitText still manages to inject spans into our
+    // root after mount (it shouldn't, but defense in depth), unwrap them.
+    let splitObserver = null;
+    const startSplitObserver = () => {
+      const root = document.getElementById("promethee-root");
+      if (!root || splitObserver) return;
+      splitObserver = new MutationObserver(() => unwrapSplitSpans(root));
+      splitObserver.observe(root, { subtree: true, childList: true });
+    };
+    startSplitObserver();
+    const splitTimers = [200, 600, 1500, 4000].map((d) => setTimeout(startSplitObserver, d));
 
     const lerp = (a, b, t) => a + (b - a) * t;
     const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -868,12 +940,14 @@ function HeroBackground() {
       mounted = false;
       cancelAnimationFrame(rafId);
       timers.forEach(clearTimeout);
-      document.removeEventListener("visibilitychange", killScrollTrigger);
+      splitTimers.forEach(clearTimeout);
+      if (splitObserver) splitObserver.disconnect();
+      document.removeEventListener("visibilitychange", neutralize);
     };
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[0] overflow-hidden bg-black">
+    <div className="hero-bg-wrap z-[0] overflow-hidden bg-black">
       <div
         ref={elRef}
         className="hero-bg-image absolute -inset-20"
