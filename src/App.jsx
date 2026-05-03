@@ -737,9 +737,9 @@ function BentoFeatureCard({ delay = 0, order = "" }) {
   );
 }
 
-function HeroBackground() {
+function HeroBackground({ loaded, onLoaded }) {
   const elRef = useRef(null);
-  const [loaded, setLoaded] = useState(false);
+  const setLoaded = onLoaded;
 
   const bgUrl = import.meta.env.DEV
     ? "/assets/landing_background.png"
@@ -970,9 +970,15 @@ export default function App() {
   const handleWaitlistClick = () => setOpen(true);
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
+  // Choreographed reveal: wait for the hero background image to load,
+  // then bg fades in (~600ms), then headline + button follow with a
+  // small overlap. This is the Apple/Linear/Vercel pattern — the image
+  // is the stage, the text are the actors. Stage first.
+  const [bgLoaded, setBgLoaded] = useState(false);
+
   return (
     <main className="relative w-full min-h-screen overflow-x-hidden flex flex-col font-sans selection:bg-white/20 selection:text-white bg-black">
-      <HeroBackground />
+      <HeroBackground loaded={bgLoaded} onLoaded={() => setBgLoaded(true)} />
       <div className="fixed inset-0 z-[1] pointer-events-none" style={{
         background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%)"
       }} />
@@ -991,8 +997,8 @@ export default function App() {
               <motion.h1
                 key="headline"
                 initial={{ opacity: 0, y: isMobile ? 0 : 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: isMobile ? 0.6 : 1.2, ease: [0.22, 1, 0.36, 1] }}
+                animate={bgLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: isMobile ? 0 : 24 }}
+                transition={{ duration: isMobile ? 0.6 : 1.2, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-medium leading-[1.02] tracking-tight max-w-4xl"
               >
                 A new era begins.
@@ -1001,8 +1007,8 @@ export default function App() {
               <motion.div
                 key="cta"
                 initial={{ opacity: 0, y: isMobile ? 0 : 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: isMobile ? 0.5 : 1.0, delay: isMobile ? 0.1 : 0.15, ease: [0.22, 1, 0.36, 1] }}
+                animate={bgLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: isMobile ? 0 : 16 }}
+                transition={{ duration: isMobile ? 0.5 : 1.0, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="shrink-0"
               >
                 <button
