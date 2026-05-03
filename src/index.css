@@ -116,6 +116,25 @@ input.field:focus {
   animation: ambient-sweep 3.2s ease-in-out infinite;
 }
 
+/* Webflow's host page (Eclipse V2 template) applies a global
+   background-image (a grey placeholder SVG hosted on
+   d3e54v103j8qbb.cloudfront.net) to every <h1>–<h6>. The Eclipse
+   template uses GSAP SplitText + ScrollTrigger to reveal the real
+   text and clear the placeholder — but our embed kills ScrollTrigger
+   to protect parallax, so the grey placeholder never gets cleared.
+   Confirmed via DevTools: getComputedStyle(h4).background returned
+   `rgba(0,0,0,0) url("...background-image.svg") repeat scroll`.
+   Override here so headings inside our embed have no background. */
+#promethee-root h1,
+#promethee-root h2,
+#promethee-root h3,
+#promethee-root h4,
+#promethee-root h5,
+#promethee-root h6 {
+  background-image: none !important;
+  background-color: transparent !important;
+}
+
 /* Hero background wrapper.
    Desktop: position:fixed so the background stays put while content
             scrolls — needed for our parallax effect.
@@ -141,6 +160,11 @@ input.field:focus {
     bottom: auto;
     height: 100vh;
     height: 100svh;
+    /* Fade the bottom of the hero bg into black so the transition
+       into the bento section is smooth (no hard cut). The mask makes
+       the image itself fade to transparent in its bottom 35%. */
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 65%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 0%, black 65%, transparent 100%);
   }
 
   /* Mobile: drop the backdrop-blur on the join-waitlist pill. On desktop

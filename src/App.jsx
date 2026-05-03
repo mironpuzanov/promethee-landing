@@ -968,6 +968,7 @@ function HeroBackground() {
 export default function App() {
   const [open, setOpen] = useState(false);
   const handleWaitlistClick = () => setOpen(true);
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   return (
     <main className="relative w-full min-h-screen overflow-x-hidden flex flex-col font-sans selection:bg-white/20 selection:text-white bg-black">
@@ -989,9 +990,9 @@ export default function App() {
             <div className="absolute left-0 right-0 bottom-[12%] md:bottom-[30%] flex flex-col items-center text-center gap-8 md:flex-row md:items-end md:justify-between md:text-left md:gap-6">
               <motion.h1
                 key="headline"
-                initial={{ opacity: 0, y: 24 }}
+                initial={{ opacity: 0, y: isMobile ? 0 : 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: isMobile ? 0.6 : 1.2, ease: [0.22, 1, 0.36, 1] }}
                 className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium leading-[1.02] tracking-tight max-w-4xl"
               >
                 A new era begins.
@@ -999,9 +1000,9 @@ export default function App() {
 
               <motion.div
                 key="cta"
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: isMobile ? 0 : 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1.0, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: isMobile ? 0.5 : 1.0, delay: isMobile ? 0.1 : 0.15, ease: [0.22, 1, 0.36, 1] }}
                 className="shrink-0"
               >
                 <button
