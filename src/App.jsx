@@ -987,13 +987,13 @@ export default function App() {
           </header>
 
           <section className="flex-1 relative">
-            <div className="absolute left-0 right-0 bottom-[12%] md:bottom-[30%] flex flex-col items-center text-center gap-8 md:flex-row md:items-end md:justify-between md:text-left md:gap-6">
+            <div className="absolute left-0 right-0 bottom-[10%] md:bottom-[23.6%] flex flex-col items-center text-center gap-8 md:flex-row md:items-center md:justify-between md:text-left md:gap-6">
               <motion.h1
                 key="headline"
                 initial={{ opacity: 0, y: isMobile ? 0 : 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: isMobile ? 0.6 : 1.2, ease: [0.22, 1, 0.36, 1] }}
-                className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium leading-[1.02] tracking-tight max-w-4xl"
+                className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-medium leading-[1.02] tracking-tight max-w-4xl"
               >
                 A new era begins.
               </motion.h1>
