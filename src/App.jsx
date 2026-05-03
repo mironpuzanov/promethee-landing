@@ -298,14 +298,14 @@ function WaitlistDrawer({ open, onClose }) {
   );
 }
 
-function BentoCard({ children, className = "", delay = 0 }) {
+function BentoCard({ children, className = "", delay = 0, order = "" }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "0px 0px -10% 0px", amount: 0.15 }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
-      className={"relative rounded-3xl p-7 md:p-8 flex flex-col justify-between min-h-[300px] overflow-hidden " + className}
+      className={"relative rounded-3xl p-7 md:p-8 flex flex-col justify-between min-h-[300px] overflow-hidden " + order + " " + className}
       style={{
         background: "rgba(14, 14, 16, 0.55)",
         backdropFilter: "blur(20px) saturate(140%)",
@@ -696,14 +696,14 @@ function MentorMessage() {
   );
 }
 
-function BentoFeatureCard({ delay = 0 }) {
+function BentoFeatureCard({ delay = 0, order = "" }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16, scale: 0.98 }}
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, margin: "0px 0px -10% 0px", amount: 0.15 }}
       transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="relative rounded-3xl overflow-hidden md:row-span-2 min-h-[440px] md:min-h-[540px] flex flex-col"
+      className={"relative rounded-3xl overflow-hidden md:row-span-2 min-h-[440px] md:min-h-[540px] flex flex-col " + order}
       style={{
         background: "linear-gradient(180deg, #0c0c0f 0%, #050507 100%)",
         border: "1px solid rgba(255, 255, 255, 0.08)",
@@ -739,6 +739,11 @@ function BentoFeatureCard({ delay = 0 }) {
 
 function HeroBackground() {
   const elRef = useRef(null);
+  const [loaded, setLoaded] = useState(false);
+
+  const bgUrl = import.meta.env.DEV
+    ? "/assets/landing_background.png"
+    : "https://promethee-landing.vercel.app/assets/landing_background.png";
 
   useEffect(() => {
     let rafId = 0;
@@ -818,45 +823,45 @@ function HeroBackground() {
       }
       const vh = window.innerHeight || 800;
       const isMobile = window.innerWidth < 768;
-      const targetSy = readScrollY();
 
-      // Mobile: ease toward target (smoothing factor 0.18 = ~6 frames to settle).
-      // Desktop: snap directly so parallax tracks scroll 1:1.
+      // Mobile: parallax disabled — fixed background only. iOS chunky
+      // scroll updates make any scroll-coupled motion read as jumpy,
+      // and we'd rather have a clean static hero than a jittery one.
       if (isMobile) {
-        smoothedSy += (targetSy - smoothedSy) * 0.18;
-      } else {
-        smoothedSy = targetSy;
+        el.style.transform = "";
+        el.style.filter = "";
+        rafId = requestAnimationFrame(tick);
+        return;
       }
+
+      smoothedSy = readScrollY();
       const sy = smoothedSy;
 
-      // Mobile: translate-only — no per-frame scale (avoids GPU texture
-      // resampling) and no filter. Image is pre-scaled to 1.08 statically
-      // via CSS, so we only animate translate3d. iOS Safari delivers
-      // scrollY in chunks during momentum scroll; pure translate hides
-      // those chunks far better than animated scale does.
-      // Desktop: unchanged — scale + translate + blur.
-      //   y:     mobile [0, vh] → [0, -60],   desktop [0, vh*2] → [0, -140]
-      //   scale: desktop [0, vh*2] → [1, 1.25] (mobile is static 1.08)
-      //   blur:  desktop only, [vh*0.3, vh*1.6] → [0, 36]
-      const tRange = isMobile ? vh : vh * 2;
-      const t = clamp01(sy / tRange);
-      const ty = lerp(0, isMobile ? -60 : -140, t);
-
-      if (isMobile) {
-        el.style.transform = `translate3d(0, ${ty}px, 0)`;
-        el.style.filter = "";
-      } else {
-        const scale = lerp(1, 1.25, t);
-        const bStart = vh * 0.3;
-        const bEnd = vh * 1.6;
-        const bt = clamp01((sy - bStart) / (bEnd - bStart));
-        const blurPx = lerp(0, 36, bt);
-        el.style.transform = `translate3d(0, ${ty}px, 0) scale(${scale})`;
-        el.style.filter = `blur(${blurPx}px) saturate(1.12)`;
-      }
+      //   y:     [0, vh*2] → [0, -140]
+      //   scale: [0, vh*2] → [1, 1.25]
+      //   blur:  [vh*0.3, vh*1.6] → [0, 36]
+      const t = clamp01(sy / (vh * 2));
+      const ty = lerp(0, -140, t);
+      const scale = lerp(1, 1.25, t);
+      const bStart = vh * 0.3;
+      const bEnd = vh * 1.6;
+      const bt = clamp01((sy - bStart) / (bEnd - bStart));
+      const blurPx = lerp(0, 36, bt);
+      el.style.transform = `translate3d(0, ${ty}px, 0) scale(${scale})`;
+      el.style.filter = `blur(${blurPx}px) saturate(1.12)`;
 
       rafId = requestAnimationFrame(tick);
     };
+
+    // Preload the background image, then fade it in.
+    const preload = new Image();
+    preload.src = bgUrl;
+    if (preload.complete) {
+      setLoaded(true);
+    } else {
+      preload.onload = () => mounted && setLoaded(true);
+      preload.onerror = () => mounted && setLoaded(true);
+    }
 
     rafId = requestAnimationFrame(tick);
     return () => {
@@ -867,12 +872,8 @@ function HeroBackground() {
     };
   }, []);
 
-  const bgUrl = import.meta.env.DEV
-    ? "/assets/landing_background.png"
-    : "https://promethee-landing.vercel.app/assets/landing_background.png";
-
   return (
-    <div className="fixed inset-0 z-[0] overflow-hidden">
+    <div className="fixed inset-0 z-[0] overflow-hidden bg-black">
       <div
         ref={elRef}
         className="hero-bg-image absolute -inset-20"
@@ -880,8 +881,10 @@ function HeroBackground() {
           backgroundImage: `url('${bgUrl}')`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          willChange: "transform, filter",
+          willChange: "transform, filter, opacity",
           backfaceVisibility: "hidden",
+          opacity: loaded ? 1 : 0,
+          transition: "opacity 700ms ease-out",
         }}
       />
     </div>
@@ -893,7 +896,7 @@ export default function App() {
   const handleWaitlistClick = () => setOpen(true);
 
   return (
-    <main className="relative w-full min-h-screen overflow-x-hidden flex flex-col font-sans selection:bg-white/20 selection:text-white">
+    <main className="relative w-full min-h-screen overflow-x-hidden flex flex-col font-sans selection:bg-white/20 selection:text-white bg-black">
       <HeroBackground />
       <div className="fixed inset-0 z-[1] pointer-events-none" style={{
         background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%)"
@@ -915,7 +918,7 @@ export default function App() {
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-                className="text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-medium leading-[1.02] tracking-tight max-w-4xl"
+                className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium leading-[1.02] tracking-tight max-w-4xl"
               >
                 A new era begins.
               </motion.h1>
@@ -943,11 +946,7 @@ export default function App() {
         </div>
 
         <section
-          className="snap-section relative w-full px-6 md:px-10 pb-32 -mt-[60vh] md:-mt-[70vh] pt-[60vh] md:pt-[70vh] pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,0.15) 28%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0.78) 70%, rgba(0,0,0,0.78) 100%)",
-          }}
+          className="snap-section bento-section relative w-full px-6 md:px-10 pb-32 -mt-[60vh] md:-mt-[70vh] pt-[60vh] md:pt-[70vh] pointer-events-none"
         >
           <div
             className="absolute inset-0 pointer-events-none opacity-[0.05] mix-blend-overlay"
@@ -975,7 +974,7 @@ export default function App() {
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 md:auto-rows-fr">
-              <BentoCard delay={0}>
+              <BentoCard delay={0} order="order-2 md:order-none">
                 <div className="flex flex-col h-full">
                   <div className="flex items-center justify-center h-[180px] md:h-[200px] pb-4">
                     <AmbientPill />
@@ -989,9 +988,9 @@ export default function App() {
                 </div>
               </BentoCard>
 
-              <BentoFeatureCard delay={0.05} />
+              <BentoFeatureCard delay={0.05} order="order-1 md:order-none" />
 
-              <BentoCard delay={0.1}>
+              <BentoCard delay={0.1} order="order-3 md:order-none">
                 <div className="flex flex-col h-full">
                   <div className="flex items-center justify-center h-[180px] md:h-[200px] pb-4">
                     <ProgressionWidget />
@@ -1005,7 +1004,7 @@ export default function App() {
                 </div>
               </BentoCard>
 
-              <BentoCard delay={0.15}>
+              <BentoCard delay={0.15} order="order-4 md:order-none">
                 <div className="flex flex-col h-full">
                   <div className="flex items-center justify-center h-[180px] md:h-[200px] pb-4">
                     <CoPresenceWidget />
@@ -1019,7 +1018,7 @@ export default function App() {
                 </div>
               </BentoCard>
 
-              <BentoCard delay={0.2}>
+              <BentoCard delay={0.2} order="order-5 md:order-none">
                 <div className="flex flex-col h-full">
                   <div className="flex items-center justify-center h-[180px] md:h-[200px] pb-4">
                     <HeatmapWidget />
