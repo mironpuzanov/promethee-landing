@@ -11,6 +11,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Mirrors the DB-side public.is_junk_email() function. Kept in sync so the
 // user gets a friendly error before we even hit the network for obvious junk.
 const DISPOSABLE_DOMAINS = new Set([
+  // v1
   "mailinator.com", "guerrillamail.com", "guerrillamail.info",
   "guerrillamail.net", "guerrillamail.org", "10minutemail.com",
   "10minutemail.net", "tempmail.com", "temp-mail.org",
@@ -20,6 +21,23 @@ const DISPOSABLE_DOMAINS = new Set([
   "dispostable.com", "mytemp.email", "tempr.email", "tmpmail.org",
   "tmpmail.net", "discard.email", "discardmail.com", "fake-mail.net",
   "mvrht.com", "inboxbear.com", "temporary-mail.net",
+  // v2: domains used in the Corentin attack
+  "scopemail.net", "turboutbox.com", "deltajohnsons.com",
+  "fusioninbox.com", "kynninc.com", "wnbaldwy.com", "allfreemail.net",
+  "mailmagnet.co", "ignitedock.com",
+  // v2: other common disposable services
+  "emailondeck.com", "getnada.com", "nada.email", "emailfake.com",
+  "tempail.com", "mail-temp.com", "mailtemp.org", "instaddr.com",
+  "incognitomail.org", "jetable.org", "mailcatch.com", "mailexpire.com",
+  "mailforspam.com", "mailme.lv", "meltmail.com", "mt2014.com",
+  "mt2015.com", "no-spam.ws", "objectmail.com", "proxymail.eu",
+  "rcpt.at", "sogetthis.com", "soodonims.com", "spambog.com",
+  "spambox.us", "thankyou2010.com", "trbvm.com", "trillianpro.com",
+  "twinmail.de", "venompen.com", "wegwerfmail.de", "wegwerfmail.net",
+  "wegwerfmail.org", "whyspam.me", "willhackforfood.biz",
+  "willselfdestruct.com", "wuzup.net", "wuzupmail.net", "xagloo.com",
+  "xemaps.com", "xents.com", "xmaily.com", "yapped.net", "zetmail.com",
+  "zoemail.org", "zoemail.net", "zoemail.com",
 ]);
 
 const JUNK_LOCAL_PARTS = new Set([
