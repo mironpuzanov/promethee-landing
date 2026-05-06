@@ -6,14 +6,19 @@ import { ArrowRight } from "lucide-react";
 // both so users on the "wrong" device (helping a teammate, etc.) can still
 // grab the other one.
 //
-// Links point at the public GitHub Releases — they go live the moment
-// `bash scripts/release.sh` publishes. Until then these are placeholders that
-// will 404 — that's expected.
+// Links use GitHub's `/releases/latest/download/` redirect — it always points
+// to the most recently published release. `release.sh` publishes unversioned
+// alias DMGs (`Promethee-darwin-{arch}.dmg`) alongside the versioned ones, so
+// these URLs always serve the current build with no per-release page update.
+//
+// VERSION below is the displayed version (subtitle only). Bump it on each
+// release so the page text stays accurate, but the download links don't
+// depend on it.
 
 const VERSION = "1.2.0";
-const RELEASES_BASE = "https://github.com/mironpuzanov/Promethee-releases/releases/download";
-const ARM64_URL = `${RELEASES_BASE}/v${VERSION}/Promethee-${VERSION}-arm64.dmg`;
-const X64_URL   = `${RELEASES_BASE}/v${VERSION}/Promethee-${VERSION}-x64.dmg`;
+const RELEASES_BASE = "https://github.com/mironpuzanov/Promethee-releases/releases/latest/download";
+const ARM64_URL = `${RELEASES_BASE}/Promethee-darwin-arm64.dmg`;
+const X64_URL   = `${RELEASES_BASE}/Promethee-darwin-x64.dmg`;
 
 function PrometheeMark({ size = 28 }) {
   return (
