@@ -15,7 +15,7 @@ import { ArrowRight } from "lucide-react";
 // release so the page text stays accurate, but the download links don't
 // depend on it.
 
-const VERSION = "1.2.4";
+const VERSION = "1.2.5";
 const RELEASES_BASE = "https://github.com/mironpuzanov/Promethee-releases/releases/latest/download";
 const ARM64_URL = `${RELEASES_BASE}/Promethee-darwin-arm64.dmg`;
 const X64_URL   = `${RELEASES_BASE}/Promethee-darwin-x64.dmg`;
