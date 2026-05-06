@@ -90,7 +90,7 @@ export default function DownloadPage() {
         <h1 className="text-white text-3xl md:text-4xl font-medium tracking-tight leading-[1.1]">
           Download Promethee
         </h1>
-        <p className="text-white/50 text-sm mt-4 leading-relaxed max-w-xs">
+        <p className="text-white/50 text-sm mt-4 leading-relaxed whitespace-nowrap">
           macOS · v{VERSION}. Pick the build that matches your Mac.
         </p>
 
