@@ -38,7 +38,14 @@ const DISPOSABLE_DOMAINS = new Set([
   "willselfdestruct.com", "wuzup.net", "wuzupmail.net", "xagloo.com",
   "xemaps.com", "xents.com", "xmaily.com", "yapped.net", "zetmail.com",
   "zoemail.org", "zoemail.net", "zoemail.com",
+  // v3: addymail.com (used in Corentin-style farming)
+  "addymail.com",
 ]);
+
+// Proton Pass alias domains. Not blocked outright (real Proton paid users
+// have aliases here for legit services), but auto-generated aliases targeting
+// our brand or matching the Proton Pass default pattern are blocked.
+const PROTON_PASS_DOMAINS = new Set(["passmail.net", "passmail.com", "pm.me"]);
 
 const JUNK_LOCAL_PARTS = new Set([
   "go", "goo", "goog", "googl", "google", "gmail", "test", "tests",
@@ -54,6 +61,11 @@ export function isJunkEmail(email) {
   const [local, domain] = e.split("@");
   if (!local || !domain) return true;
   if (DISPOSABLE_DOMAINS.has(domain)) return true;
+  if (PROTON_PASS_DOMAINS.has(domain)) {
+    if (local.startsWith("promethee") || local.startsWith("promethe.")) return true;
+    // Proton Pass auto-generated default: word.word + 3 digits
+    if (/^[a-z]+\.[a-z]+[0-9]{3}$/.test(local)) return true;
+  }
   if (JUNK_LOCAL_PARTS.has(local)) return true;
   if (/(.)\1{4,}/.test(local)) return true;
   if (local.length >= 8 && /^(qwe|asd|zxc|wer|ert|sdf|dfg|fgh|xcv|cvb|gojy|sasa|saqq){2,}/.test(local)) return true;
