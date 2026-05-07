@@ -6,19 +6,39 @@ import { ArrowRight } from "lucide-react";
 // both so users on the "wrong" device (helping a teammate, etc.) can still
 // grab the other one.
 //
-// Links use GitHub's `/releases/latest/download/` redirect — it always points
-// to the most recently published release. `release.sh` publishes unversioned
-// alias DMGs (`Promethee-darwin-{arch}.dmg`) alongside the versioned ones, so
-// these URLs always serve the current build with no per-release page update.
+// Links use GitHub's `/releases/latest/download/` redirect — always points
+// to the most recently published release, so DMGs are always current with
+// zero per-release work.
 //
-// VERSION below is the displayed version (subtitle only). Bump it on each
-// release so the page text stays accurate, but the download links don't
-// depend on it.
+// Version label is fetched from the GitHub Releases API on mount so the
+// "v1.2.5" subtitle updates itself when a new release is published. Falls
+// back to FALLBACK_VERSION if the API is unreachable / rate-limited.
 
-const VERSION = "1.2.5";
-const RELEASES_BASE = "https://github.com/mironpuzanov/Promethee-releases/releases/latest/download";
+const FALLBACK_VERSION = "1.2.5";
+const RELEASES_REPO = "mironpuzanov/Promethee-releases";
+const RELEASES_BASE = `https://github.com/${RELEASES_REPO}/releases/latest/download`;
 const ARM64_URL = `${RELEASES_BASE}/Promethee-darwin-arm64.dmg`;
 const X64_URL   = `${RELEASES_BASE}/Promethee-darwin-x64.dmg`;
+const LATEST_API = `https://api.github.com/repos/${RELEASES_REPO}/releases/latest`;
+
+// Strip a leading "v" if the tag is "v1.2.5", normalize to "1.2.5".
+function normalizeTag(tag) {
+  if (!tag || typeof tag !== "string") return null;
+  return tag.replace(/^v/i, "").trim() || null;
+}
+
+async function fetchLatestVersion() {
+  try {
+    const res = await fetch(LATEST_API, {
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return normalizeTag(json?.tag_name);
+  } catch {
+    return null;
+  }
+}
 
 function PrometheeMark({ size = 28 }) {
   return (
@@ -77,9 +97,17 @@ function DownloadButton({ href, label, sublabel, recommended }) {
 
 export default function DownloadPage() {
   const [arch, setArch] = useState(null);
+  const [version, setVersion] = useState(FALLBACK_VERSION);
 
   useEffect(() => {
     setArch(detectMacArch());
+    let mounted = true;
+    fetchLatestVersion().then((v) => {
+      if (mounted && v) setVersion(v);
+    });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const recommendArm64 = arch === "arm64" || arch == null;
@@ -96,7 +124,7 @@ export default function DownloadPage() {
           Download Promethee
         </h1>
         <p className="text-white/50 text-sm mt-4 leading-relaxed whitespace-nowrap">
-          macOS · v{VERSION}. Pick the build that matches your Mac.
+          macOS · v{version}. Pick the build that matches your Mac.
         </p>
 
         <div className="mt-12 w-full flex flex-col gap-3">
