@@ -55,6 +55,21 @@ const JUNK_LOCAL_PARTS = new Set([
   "n","o","p","q","r","s","t","u","v","w","x","y","z",
 ]);
 
+// Mirrors the DB-side public.normalize_email() function. Used to detect
+// alias collisions (Gmail dot trick, plus-addressing, googlemail.com)
+// before sending to the server. The server is still the source of truth —
+// this is just so we can warn the user instantly.
+export function normalizeEmail(email) {
+  let e = (email || "").toLowerCase().trim();
+  if (!e || !e.includes("@")) return e;
+  let [local, domain] = e.split("@");
+  if (!local || !domain) return e;
+  if (domain === "googlemail.com") domain = "gmail.com";
+  if (local.includes("+")) local = local.split("+", 1)[0];
+  if (domain === "gmail.com") local = local.replace(/\./g, "");
+  return local + "@" + domain;
+}
+
 export function isJunkEmail(email) {
   const e = (email || "").toLowerCase().trim();
   if (!e || !e.includes("@")) return true;
