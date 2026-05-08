@@ -40,6 +40,8 @@ const DISPOSABLE_DOMAINS = new Set([
   "zoemail.org", "zoemail.net", "zoemail.com",
   // v3: addymail.com (used in Corentin-style farming)
   "addymail.com",
+  // v5: mozej.com (used in Belkhir Achraf farming, 5 MX records — clearly built for volume)
+  "mozej.com",
 ]);
 
 // Proton Pass alias domains. Not blocked outright (real Proton paid users
